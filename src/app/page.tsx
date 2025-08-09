@@ -29,6 +29,11 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true)
+      
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Please check environment variables.')
+      }
+      
       const { data, error } = await supabase
         .from('fund_data')
         .select('*')
