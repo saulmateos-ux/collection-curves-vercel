@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, 
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  BarChart, Bar, XAxis, YAxis, 
+  CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts'
 
 interface FundData {
@@ -21,7 +21,6 @@ export default function Dashboard() {
   const [fundData, setFundData] = useState<FundData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -39,8 +38,8 @@ export default function Dashboard() {
       if (error) throw error
 
       setFundData(data || [])
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError((err as Error).message)
       console.error('Error fetching data:', err)
     } finally {
       setLoading(false)
@@ -66,7 +65,7 @@ export default function Dashboard() {
   const providers = Array.from(new Set(fundData.map(f => f.provider_name))).sort()
 
   // Grade distribution
-  const gradeDistribution = fundData.reduce((acc: any, item) => {
+  const gradeDistribution = fundData.reduce((acc: Record<string, number>, item) => {
     const grade = item.investment_letter_grade || 'Unknown'
     acc[grade] = (acc[grade] || 0) + 1
     return acc
