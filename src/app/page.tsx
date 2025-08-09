@@ -8,13 +8,14 @@ import {
 } from 'recharts'
 
 interface FundData {
-  provider_name: string
-  investment_name: string
-  total_invested: number
-  total_balance_today: number
-  net_multiple: number
-  investment_letter_grade: string
-  purchase_month: string
+  provider_name_per_tbr: string
+  opportunity_name: string
+  total_sent: number
+  total_repaid: number
+  funding_amount: number
+  case_status: string
+  origination_date: string
+  repaid: boolean
 }
 
 export default function Dashboard() {
@@ -37,7 +38,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('fund_data')
         .select('*')
-        .order('purchase_month', { ascending: false })
+        .order('origination_date', { ascending: false })
         .limit(1000)
 
       if (error) throw error
@@ -54,9 +55,9 @@ export default function Dashboard() {
   // Calculate portfolio metrics
   const portfolioMetrics = fundData.reduce(
     (acc, item) => ({
-      totalInvested: acc.totalInvested + (item.total_invested || 0),
-      currentValue: acc.currentValue + (item.total_balance_today || 0),
-      avgMultiple: acc.avgMultiple + (item.net_multiple || 0),
+      totalInvested: acc.totalInvested + (item.total_sent || 0),
+      currentValue: acc.currentValue + (item.total_repaid || 0),
+      avgMultiple: acc.avgMultiple + (item.total_sent > 0 ? (item.total_repaid || 0) / item.total_sent : 0),
       count: acc.count + 1,
     }),
     { totalInvested: 0, currentValue: 0, avgMultiple: 0, count: 0 }
@@ -67,27 +68,27 @@ export default function Dashboard() {
   }
 
   // Get unique providers
-  const providers = Array.from(new Set(fundData.map(f => f.provider_name))).sort()
+  const providers = Array.from(new Set(fundData.map(f => f.provider_name_per_tbr))).sort()
 
-  // Grade distribution
-  const gradeDistribution = fundData.reduce((acc: Record<string, number>, item) => {
-    const grade = item.investment_letter_grade || 'Unknown'
-    acc[grade] = (acc[grade] || 0) + 1
+  // Case Status distribution
+  const statusDistribution = fundData.reduce((acc: Record<string, number>, item) => {
+    const status = item.case_status || 'Unknown'
+    acc[status] = (acc[status] || 0) + 1
     return acc
   }, {})
 
-  const gradeData = Object.entries(gradeDistribution).map(([grade, count]) => ({
-    grade,
+  const statusData = Object.entries(statusDistribution).map(([status, count]) => ({
+    grade: status,
     count,
   }))
 
   // Provider performance
   const providerPerformance = providers.map(provider => {
-    const providerData = fundData.filter(f => f.provider_name === provider)
+    const providerData = fundData.filter(f => f.provider_name_per_tbr === provider)
     const metrics = providerData.reduce(
       (acc, item) => ({
-        invested: acc.invested + (item.total_invested || 0),
-        current: acc.current + (item.total_balance_today || 0),
+        invested: acc.invested + (item.total_sent || 0),
+        current: acc.current + (item.total_repaid || 0),
         count: acc.count + 1,
       }),
       { invested: 0, current: 0, count: 0 }
@@ -168,11 +169,11 @@ export default function Dashboard() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Grade Distribution */}
+          {/* Case Status Distribution */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Investment Grade Distribution</h2>
+            <h2 className="text-xl font-semibold mb-4">Case Status Distribution</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={gradeData}>
+              <BarChart data={statusData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="grade" />
                 <YAxis />
