@@ -87,6 +87,8 @@ export default function AdminPage() {
             const batch = records.slice(i, i + batchSize)
             
             try {
+              if (!supabase) throw new Error('Supabase not initialized')
+              
               const { error } = await supabase
                 .from('fund_data')
                 .upsert(batch)
@@ -174,12 +176,23 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from('fund_data')
         .select('*')
-        .csv()
       
       if (error) throw error
       
+      // Convert to CSV
+      let csvContent = ''
+      if (data && data.length > 0) {
+        const headers = Object.keys(data[0]).join(',')
+        const rows = data.map(row => 
+          Object.values(row).map(val => 
+            typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+          ).join(',')
+        ).join('\n')
+        csvContent = `${headers}\n${rows}`
+      }
+      
       // Create download link
-      const blob = new Blob([data], { type: 'text/csv' })
+      const blob = new Blob([csvContent], { type: 'text/csv' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
